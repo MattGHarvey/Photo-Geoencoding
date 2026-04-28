@@ -27,6 +27,28 @@ This plugin allows Lightroom to reverse-geocode GPS coordinates in photos — lo
 
 Matt Harvey — [75CentralPhotography.com](https://75CentralPhotography.com) · [RobotSprocket.com](https://robotsprocket.com)
 
+## Maintaining the KML File
+
+### Sorting entries
+
+Entries in `Photo Geocoding.kml` should be kept in alphabetical order at every level of the folder hierarchy (country → province/state → city → placemark). A build script is included to do this automatically.
+
+**Requirements:** Python 3 (no third-party packages needed)
+
+**Sort in-place:**
+
+```bash
+python3 sort_kml.py
+```
+
+**Preview changes in a separate file first:**
+
+```bash
+python3 sort_kml.py "Photo Geocoding.kml" "Photo Geocoding Sorted.kml"
+```
+
+Run the script after adding or editing any entries before committing.
+
 ## Contributing
 
 Pull requests are welcome! If you have custom locations to add or corrections to existing ones, feel free to open a PR.
