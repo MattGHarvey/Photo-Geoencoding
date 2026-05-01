@@ -187,6 +187,9 @@ def main() -> None:
     print("Sorting …")
     sorted_text = sort_kml(text)
 
+    place_count = len(re.findall(r"<Placemark(?:\s[^>]*)?>", sorted_text))
+    print(f"Places: {place_count}")
+
     print(f"Writing {output_path} …")
     output_path.write_text(sorted_text, encoding="utf-8")
     print("Done.")
