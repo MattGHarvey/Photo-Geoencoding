@@ -138,6 +138,60 @@ def _sort_children(content: str) -> str:
     return "".join(parts)
 
 
+def kml_stats(text: str) -> None:
+    """Print summary statistics about the sorted KML."""
+    # Total placemarks
+    place_count = len(re.findall(r"<Placemark(?:\s[^>]*)?>", text))
+    print(f"  Places  : {place_count}")
+
+    # Total folders (excluding the single root folder)
+    folder_count = len(re.findall(r"<Folder(?:\s[^>]*)?>", text)) - 1
+    print(f"  Folders : {folder_count}")
+
+    # Names of the top-level regions (direct Folder children of the root folder)
+    root_m = re.search(r"<Folder(?:\s[^>]*)?>", text)
+    if root_m:
+        root_end = _find_close(text, root_m.start(), "Folder")
+        root_open_end = root_m.end()
+        root_inner = text[root_open_end : root_end - len("</Folder>")]
+        top_names = []
+        i = 0
+        while True:
+            fm = re.search(r"<Folder(?:\s[^>]*)?>", root_inner[i:])
+            if not fm:
+                break
+            fstart = i + fm.start()
+            fend = _find_close(root_inner, fstart, "Folder")
+            block = root_inner[fstart:fend]
+            name_m = re.search(r"<name>(.*?)</name>", block, re.DOTALL)
+            if name_m:
+                top_names.append(name_m.group(1).strip())
+            i = fend
+        print(f"  Regions : {', '.join(top_names)}")
+
+    # Folder with the most placemarks (excluding the root)
+    # Advance by 1 past each opening tag so nested folders are all visited.
+    i = 0
+    folder_counts: list[tuple[str, int]] = []
+    while True:
+        fm = re.search(r"<Folder(?:\s[^>]*)?>", text[i:])
+        if not fm:
+            break
+        fstart = i + fm.start()
+        fend = _find_close(text, fstart, "Folder")
+        block = text[fstart:fend]
+        count = len(re.findall(r"<Placemark(?:\s[^>]*)?>", block))
+        name_m = re.search(r"<name>(.*?)</name>", block, re.DOTALL)
+        folder_counts.append((name_m.group(1).strip() if name_m else "?", count))
+        i = fstart + 1  # step past opening tag only, so nested folders are found
+
+    # Sort descending; index 0 is the root (contains everything), skip it
+    folder_counts.sort(key=lambda x: x[1], reverse=True)
+    if len(folder_counts) > 1:
+        busiest_name, busiest_count = folder_counts[1]
+        print(f"  Busiest : {busiest_name} ({busiest_count} places)")
+
+
 def sort_kml(text: str) -> str:
     """
     Sort Folder and Placemark blocks at every nesting level, alphabetically
@@ -187,8 +241,8 @@ def main() -> None:
     print("Sorting …")
     sorted_text = sort_kml(text)
 
-    place_count = len(re.findall(r"<Placemark(?:\s[^>]*)?>", sorted_text))
-    print(f"Places: {place_count}")
+    print("Stats:")
+    kml_stats(sorted_text)
 
     print(f"Writing {output_path} …")
     output_path.write_text(sorted_text, encoding="utf-8")
